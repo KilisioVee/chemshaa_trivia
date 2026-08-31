@@ -1,14 +1,16 @@
 import 'package:chemshaa_app/presentation/widgets/style_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
 
 class TriviaRulesWidget extends StatelessWidget {
   const TriviaRulesWidget();
 
   @override
   Widget build(BuildContext context) {
-    const textStyle = TextStyle(
+    var textStyle = TextStyle(
       color: Color(0xFF101010),
-      fontSize: 13.5,
+      //fontSize: 13.5,
+      fontSize: 16.sp,
       height: 1.37,
       fontWeight: FontWeight.w600,
     );
@@ -16,37 +18,37 @@ class TriviaRulesWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Center(
+         Center(
           child: Text(
             'Live Trivia Show Rules:',
             style: TextStyle(
               color: Color(0xFF101010),
-              fontSize: 14,
+              fontSize: 16.5.sp,
               fontWeight: FontWeight.w700,
               fontStyle: FontStyle.italic,
             ),
           ),
         ),
         const SizedBox(height: 13),
-        const NumberedRule(
+         NumberedRule(
           number: '1.',
           text:
           'Answer 10 multiple-choice questions correctly during the live trivia show to win cash prizes deposited directly into your mobile money account. Please note: the cash prize is divided equally among all winners.',
           style: textStyle,
         ),
         const SizedBox(height: 13),
-        const NumberedRule(
+         NumberedRule(
           number: '2.',
           text:
           "You're eliminated if you answer incorrectly, skip questions, or don't answer at all.",
           style: textStyle,
         ),
         const SizedBox(height: 20),
-        const Text(
+         Text(
           'Eliminated? No worries—you can still earn points for correct answers. Stay tuned; something extra sweet is coming soon.',
           style: TextStyle(
             color: Color(0xFF101010),
-            fontSize: 13.5,
+            fontSize: 15.sp,
             height: 1.37,
             fontWeight: FontWeight.w600,
             fontStyle: FontStyle.italic,
@@ -64,12 +66,12 @@ class TriviaRulesWidget extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               foregroundColor: const Color(0xFF101010),
             ),
-            child: const Text(
+            child:  Text(
               'Share your feedback on our app',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
-                fontStyle: FontStyle.italic,
+                fontStyle: FontStyle.normal,
                 decoration: TextDecoration.underline,
               ),
             ),

@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
 
 import '../widgets/header_widget.dart';
 import '../widgets/timer_count_down_widget.dart';
 import '../widgets/trivia_rules_widget.dart';
 
-/// A faithful Flutter recreation of the ChemShaa live-trivia waiting screen.
-///
-/// Add this file to lib/ and open [ChemShaaLiveTriviaPage] from your app.
 class ChemShaaLiveTriviaPage extends StatefulWidget {
   const ChemShaaLiveTriviaPage({super.key});
 
@@ -60,15 +58,6 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
     }
   }
 
-  String get _countdownText {
-    final hours = _remaining.inHours;
-    final minutes = _remaining.inMinutes.remainder(60);
-    final seconds = _remaining.inSeconds.remainder(60);
-
-    String twoDigits(int value) => value.toString().padLeft(2, '0');
-
-    return '${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}';
-  }
 
   @override
   void dispose() {
@@ -78,11 +67,41 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
 
   @override
   Widget build(BuildContext context) {
-    const yellow = Color(0xFFFFDF57);
-    const black = Color(0xFF050505);
+    const yellow = Color(0xFFFFC20A);
 
     return Scaffold(
       backgroundColor: yellow,
+      appBar: AppBar(
+        toolbarHeight: 5.5.h,
+        backgroundColor:yellow,
+        centerTitle: true,
+        title:    Row(
+          children: [
+            Expanded(
+              flex: 9,
+              child: Padding(
+                padding:  EdgeInsets.only(left:8.w),
+                child: Center(
+                  child: Image.asset("assets/png/chemshaa.png",width: 35.w,),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: IconButton(
+                tooltip: 'More options',
+                onPressed: () {},
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: Color(0xFF101010),
+                  size: 25,
+                ),
+              ),
+            )
+          ],
+        ),
+
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -95,29 +114,34 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
                         MediaQuery.paddingOf(context).top -
                         70,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                    child: Column(
-                      children: [
-                        const Header(),
-                        const SizedBox(height: 43),
-                        const Text(
+                  child: Column(
+                    children: [
+                       SizedBox(height: 4.h),
+                       Padding(
+                         padding:  EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 0),
+                         child: Text(
                           "Today's live trivia show is scheduled\nfor\nat 2:00 PM",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFF101010),
-                            fontSize: 21,
+                            fontSize: 18.sp,
                             height: 1.36,
                             fontWeight: FontWeight.w700,
                           ),
-                        ),
-                        const SizedBox(height: 55),
-                        const TriviaRulesWidget(),
-                        const SizedBox(height: 43),
+                                                 ),
+                       ),
+                      SizedBox(height: 5.h),
+                      Padding(
+                        padding:  EdgeInsets.fromLTRB(5.w, 0, 5.w, 0),
+                        child: const TriviaRulesWidget(),
+                      ),
+                       SizedBox(height: 4.h),
 
-                        TimerCountDownWidget()
-                      ],
-                    ),
+                      Padding(
+                        padding:  EdgeInsets.fromLTRB(0, 3.h, 0, 3.h),
+                        child: TimerCountDownWidget(),
+                      )
+                    ],
                   ),
                 ),
               ),
