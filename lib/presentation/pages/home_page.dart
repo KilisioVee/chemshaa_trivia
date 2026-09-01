@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:chemshaa_app/presentation/pages/trivia_question_page.dart';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../widgets/header_widget.dart';
 import '../widgets/timer_count_down_widget.dart';
 import '../widgets/trivia_rules_widget.dart';
 
@@ -67,7 +67,7 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
 
   @override
   Widget build(BuildContext context) {
-    const yellow = Color(0xFFFFC20A);
+    Color yellow = const Color(0xFFFFDC38);
 
     return Scaffold(
       backgroundColor: yellow,
@@ -104,50 +104,55 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
       ),
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: MediaQuery.sizeOf(context).height -
-                        MediaQuery.paddingOf(context).top -
-                        70,
-                  ),
-                  child: Column(
-                    children: [
-                       SizedBox(height: 4.h),
-                       Padding(
-                         padding:  EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 0),
-                         child: Text(
-                          "Today's live trivia show is scheduled\nfor\nat 2:00 PM",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFF101010),
-                            fontSize: 18.sp,
-                            height: 1.36,
-                            fontWeight: FontWeight.w700,
-                          ),
-                                                 ),
-                       ),
-                      SizedBox(height: 5.h),
-                      Padding(
-                        padding:  EdgeInsets.fromLTRB(5.w, 0, 5.w, 0),
-                        child: const TriviaRulesWidget(),
-                      ),
-                       SizedBox(height: 4.h),
+        child: Container(
+          color: yellow,
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.sizeOf(context).height -
+                          MediaQuery.paddingOf(context).top -
+                          70,
+                    ),
+                    child: Column(
+                      children: [
+                         SizedBox(height: 4.h),
+                         Padding(
+                           padding:  EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 0),
+                           child: Text(
+                            "Today's live trivia show is scheduled\nfor\nat 2:00 PM",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF101010),
+                              fontSize: 18.sp,
+                              height: 1.36,
+                              fontWeight: FontWeight.w700,
+                            ),
+                                                   ),
+                         ),
+                        SizedBox(height: 5.h),
+                        Padding(
+                          padding:  EdgeInsets.fromLTRB(5.w, 0, 5.w, 0),
+                          child: const TriviaRulesWidget(),
+                        ),
+                         SizedBox(height: 4.h),
 
-                      Padding(
-                        padding:  EdgeInsets.fromLTRB(0, 3.h, 0, 3.h),
-                        child: TimerCountDownWidget(),
-                      )
-                    ],
+                        Padding(
+                          padding:  EdgeInsets.fromLTRB(0, 3.h, 0, 3.h),
+                          child: GestureDetector(
+                            onTap: ()=>showLiveTriviaPopup(context),
+                              child: TimerCountDownWidget()),
+                        )
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-          ],
+            ],
+          ),
         ),
       ),
     );
