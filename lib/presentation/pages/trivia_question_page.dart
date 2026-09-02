@@ -17,8 +17,8 @@ class TriviaQuestion {
   final int correctIndex;
 }
 
-/// Ten ready-to-use randomised trivia questions. Call [shuffledTriviaQuestions]
-/// for a random order at the beginning of each game.
+/// Ten ready-to-use randomized trivia questions. Call [shuffledTriviaQuestions]
+/// at the beginning of each game to randomize their order.
 const liveTriviaQuestions = <TriviaQuestion>[
   TriviaQuestion(
     question: 'Which planet is known as the Red Planet?',
@@ -32,12 +32,7 @@ const liveTriviaQuestions = <TriviaQuestion>[
   ),
   TriviaQuestion(
     question: 'Which ocean is the largest on Earth?',
-    choices: [
-      'Atlantic Ocean',
-      'Indian Ocean',
-      'Arctic Ocean',
-      'Pacific Ocean',
-    ],
+    choices: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Pacific Ocean'],
     correctIndex: 3,
   ),
   TriviaQuestion(
@@ -57,12 +52,7 @@ const liveTriviaQuestions = <TriviaQuestion>[
   ),
   TriviaQuestion(
     question: 'Which Kenyan athlete won Olympic 800 m gold in Beijing in 2008?',
-    choices: [
-      'Faith Kipyegon',
-      'Pamela Jelimo',
-      'Vivian Cheruiyot',
-      'Tegla Loroupe',
-    ],
+    choices: ['Faith Kipyegon', 'Pamela Jelimo', 'Vivian Cheruiyot', 'Tegla Loroupe'],
     correctIndex: 1,
   ),
   TriviaQuestion(
@@ -111,14 +101,20 @@ Future<void> showLiveTriviaPopup(BuildContext context) {
           begin: const Offset(0, 1),
           end: Offset.zero,
         ).animate(curvedAnimation),
-        child: FadeTransition(
-          opacity: curvedAnimation,
-          child: child,
-        ),
+        child: FadeTransition(opacity: curvedAnimation, child: child),
       );
     },
   );
 }
+
+enum _TriviaStage {
+  question,
+  answerReveal,
+  hostTalking,
+  nextQuestionLoading,
+  finished,
+}
+
 class _LiveTriviaDialog extends StatefulWidget {
   const _LiveTriviaDialog();
 
@@ -127,20 +123,34 @@ class _LiveTriviaDialog extends StatefulWidget {
 }
 
 class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
-  static const _secondsPerQuestion = 15;
+  static const _secondsPerQuestion = 10;
+  static const _answerRevealDuration = Duration(seconds: 5);
+  static const _hostTalkingDuration = Duration(seconds: 7);
+  static const _nextQuestionLoadingDuration = Duration(seconds: 4);
   static const _cashPrize = 'KES 50,000';
 
+  static const _correctGreen = Color(0xFF42B64E);
+  static const _wrongRed = Color(0xFFE94B45);
+  static const _choiceTextDark = Color(0xFF242424);
+  static const _choiceBorder = Color(0xFFE1E1E1);
+
   late final List<TriviaQuestion> _questions;
-  Timer? _timer;
+  Timer? _questionTimer;
+  Timer? _stageTimer;
+
   int _questionIndex = 0;
   int _secondsRemaining = _secondsPerQuestion;
   int? _selectedIndex;
-  bool _hasAnswered = false;
+  _TriviaStage _stage = _TriviaStage.question;
   bool _isEliminated = false;
-  bool _playingForFun = false;
-  bool _isFinished = false;
 
   TriviaQuestion get _currentQuestion => _questions[_questionIndex];
+  bool get _hasAnswered => _stage != _TriviaStage.question;
+  bool get _isFinished => _stage == _TriviaStage.finished;
+
+  /// A timeout is represented by no selected choice during the answer reveal.
+  bool get _isNoAnswer =>
+      _selectedIndex == null && _stage == _TriviaStage.answerReveal;
 
   @override
   void initState() {
@@ -150,158 +160,153 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
   }
 
   void _startQuestionTimer() {
-    _timer?.cancel();
+    _questionTimer?.cancel();
+    _stageTimer?.cancel();
     _secondsRemaining = _secondsPerQuestion;
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || _hasAnswered || _isFinished) return;
+    _questionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _stage != _TriviaStage.question) return;
 
       if (_secondsRemaining <= 1) {
-        _timer?.cancel();
-        setState(() {
-          _secondsRemaining = 0;
-        });
-        _eliminateForTimeout();
+        _questionTimer?.cancel();
+        setState(() => _secondsRemaining = 0);
+        _revealTimedOutAnswer();
         return;
       }
 
-      setState(() {
-        _secondsRemaining--;
-      });
+      setState(() => _secondsRemaining--);
     });
   }
 
   void _answerQuestion(int index) {
-    if (_hasAnswered || _isFinished) return;
+    if (_stage != _TriviaStage.question) return;
 
-    _timer?.cancel();
+    _questionTimer?.cancel();
     final isCorrect = index == _currentQuestion.correctIndex;
 
     setState(() {
       _selectedIndex = index;
-      _hasAnswered = true;
+      _stage = _TriviaStage.answerReveal;
       if (!isCorrect) _isEliminated = true;
     });
 
-    if (!isCorrect && !_playingForFun) {
-      _showEliminatedDialog(
-        title: 'Incorrect answer',
-        message:
-            'You have been eliminated from the cash-prize game. You can still continue and play just for fun.',
-      );
-    } else {
-      Future<void>.delayed(
-        const Duration(milliseconds: 900),
-        _goToNextQuestion,
-      );
-    }
+    _scheduleHostTalking();
   }
 
-  void _eliminateForTimeout() {
-    if (_isFinished) return;
+  void _revealTimedOutAnswer() {
+    if (_stage != _TriviaStage.question) return;
 
     setState(() {
+      _selectedIndex = null;
+      _stage = _TriviaStage.answerReveal;
       _isEliminated = true;
-      _hasAnswered = true;
     });
 
-    if (!_playingForFun) {
-      _showEliminatedDialog(
-        title: 'Time is up',
-        message:
-            'You did not answer in time, so you are eliminated from the cash-prize game. Continue just for fun?',
-      );
-    } else {
-      Future<void>.delayed(
-        const Duration(milliseconds: 750),
-        _goToNextQuestion,
-      );
-    }
+    _scheduleHostTalking();
   }
 
-  Future<void> _showEliminatedDialog({
-    required String title,
-    required String message,
-  }) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Exit game'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF41AF4B),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                setState(() {
-                  _playingForFun = true;
-                });
-                _goToNextQuestion();
-              },
-              child: const Text('Continue for fun'),
-            ),
-          ],
-        );
-      },
-    );
+  /// Shows answer feedback for three seconds, then automatically starts the
+  /// full-screen host-speaking stage. No action is required from the user.
+  void _scheduleHostTalking() {
+    _stageTimer?.cancel();
+    _stageTimer = Timer(_answerRevealDuration, () {
+      if (!mounted || _stage != _TriviaStage.answerReveal) return;
+
+      setState(() => _stage = _TriviaStage.hostTalking);
+      _scheduleNextQuestionLoading();
+    });
   }
 
-  void _goToNextQuestion() {
-    if (!mounted) return;
+  void _scheduleNextQuestionLoading() {
+    _stageTimer?.cancel();
+    _stageTimer = Timer(_hostTalkingDuration, () {
+      if (!mounted || _stage != _TriviaStage.hostTalking) return;
 
+      setState(() => _stage = _TriviaStage.nextQuestionLoading);
+      _scheduleNextQuestion();
+    });
+  }
+
+  void _scheduleNextQuestion() {
+    _stageTimer?.cancel();
+    _stageTimer = Timer(_nextQuestionLoadingDuration, () {
+      if (!mounted || _stage != _TriviaStage.nextQuestionLoading) return;
+      _loadNextQuestion();
+    });
+  }
+
+  void _loadNextQuestion() {
     if (_questionIndex == _questions.length - 1) {
-      _timer?.cancel();
-      setState(() {
-        _isFinished = true;
-      });
+      _questionTimer?.cancel();
+      _stageTimer?.cancel();
+      setState(() => _stage = _TriviaStage.finished);
       return;
     }
 
     setState(() {
       _questionIndex++;
       _selectedIndex = null;
-      _hasAnswered = false;
+      _stage = _TriviaStage.question;
     });
     _startQuestionTimer();
   }
 
+  /// Determines each choice background during the answer-reveal state.
+  ///
+  /// Wrong selection: selected choice is red and the correct one is green.
+  /// No answer: correct choice is red, following the requested behaviour.
   Color _choiceColor(int index) {
-    if (!_hasAnswered || _selectedIndex != index) return Colors.white;
-    return index == _currentQuestion.correctIndex
-        ? const Color(0xFF42B64E)
-        : const Color(0xFFE94B45);
+    if (_stage == _TriviaStage.question) return Colors.white;
+
+    final correctIndex = _currentQuestion.correctIndex;
+
+    if (_selectedIndex == null) {
+      return index == correctIndex ? _wrongRed : Colors.white;
+    }
+
+    if (_selectedIndex != correctIndex) {
+      if (index == _selectedIndex) return _wrongRed;
+      if (index == correctIndex) return _correctGreen;
+      return Colors.white;
+    }
+
+    return index == correctIndex ? _correctGreen : Colors.white;
   }
 
   Color _choiceTextColor(int index) {
-    return _hasAnswered && _selectedIndex == index
-        ? Colors.white
-        : const Color(0xFF242424);
+    return _choiceColor(index) == Colors.white ? _choiceTextDark : Colors.white;
+  }
+
+  Color _choiceBorderColor(int index) {
+    return _choiceColor(index) == Colors.white
+        ? _choiceBorder
+        : _choiceColor(index);
+  }
+
+  String get _answerStatus {
+    if (_isNoAnswer) return 'No answer';
+    if (_selectedIndex == _currentQuestion.correctIndex) return 'Correct';
+    return 'Incorrect';
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _questionTimer?.cancel();
+    _stageTimer?.cancel();
     super.dispose();
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
-    final dialogHeight = 80.h;
+    if (_stage == _TriviaStage.hostTalking ||
+        _stage == _TriviaStage.nextQuestionLoading) {
+      return Material(
+        color: Colors.black,
+        child: _stage == _TriviaStage.hostTalking
+            ? _buildHostTalkingView()
+            : _buildNextQuestionLoadingView(),
+      );
+    }
 
     return SafeArea(
       top: false,
@@ -311,7 +316,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
           alignment: Alignment.bottomCenter,
           child: Container(
             width: double.infinity,
-            height: dialogHeight,
+            height: 80.h,
             clipBehavior: Clip.antiAlias,
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -326,11 +331,11 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
       ),
     );
   }
+
   Widget _buildGameView() {
     final progress = _secondsRemaining / _secondsPerQuestion;
 
     return Column(
-
       children: [
         Expanded(
           child: Padding(
@@ -340,41 +345,69 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                 Row(
                   children: [
                     SizedBox(
-                      width:28.w,
+                      width: 28.w,
                       child: Row(
                         children: [
-                          Image.asset("assets/png/logo.png", width: 10.w, height: 10.w),
+                          Image.asset(
+                            'assets/png/logo.png',
+                            width: 10.w,
+                            height: 10.w,
+                          ),
                           SizedBox(width: 1.w),
                           Text(
-                            '$_secondsRemaining',
+                            '${_questionIndex+1}',
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          SizedBox(width: 1.w),
                         ],
                       ),
                     ),
-
                     SizedBox(
-                      width:38.w,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      width: 45.w,
+                      child: Center(
+                        child: Text(
+                          _hasAnswered
+                              ? _answerStatus
+                              : _isEliminated
+                              ? 'Eliminated'
+                              : 'Live',
+                          style: TextStyle(
+                            color: _hasAnswered &&
+                                _selectedIndex == _currentQuestion.correctIndex
+                                ? _correctGreen
+                                : _hasAnswered || _isEliminated
+                                ? _wrongRed
+                                : _correctGreen,
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 17.w,
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
+                          SizedBox(
+                            width: 10.w,
+                            height: 10.w,
+                            child: CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 2,
+                              strokeCap: StrokeCap.round,
+                              color: _secondsRemaining <= 5 ? _wrongRed : _correctGreen,
+                              backgroundColor: const Color(0xFFE9E9E9),
+                            ),
+                          ),
                           Text(
-                            _hasAnswered &&
-                                    _selectedIndex == _currentQuestion.correctIndex
-                                ? 'Correct'
-                                : _isEliminated
-                                ? 'Eliminated'
-                                : 'Live',
+                            _secondsRemaining.toString(),
                             style: TextStyle(
-                              color: _isEliminated
-                                  ? const Color(0xFFE04B46)
-                                  : const Color(0xFF47B653),
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w700,
+                              color: _secondsRemaining <= 5 ? _wrongRed : _choiceTextDark,
+                              fontSize: 25,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ],
@@ -382,50 +415,47 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    minHeight: 5,
-                    value: progress,
-                    color: _secondsRemaining <= 5
-                        ? const Color(0xFFE04B46)
-                        : const Color(0xFF47B653),
-                    backgroundColor: const Color(0xFFE9E9E9),
-                  ),
-                ),
-                const SizedBox(height: 38),
+
+                 SizedBox(height: 2.h),
                 Text(
                   _currentQuestion.question,
                   textAlign: TextAlign.center,
-                  style:  TextStyle(
-                    color: Color(0xFF242424),
+                  style: TextStyle(
+                    color: _choiceTextDark,
                     fontSize: 22.sp,
                     height: 1.12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                 SizedBox(height: 5.h),
+                SizedBox(height: 5.h),
                 ...List<Widget>.generate(
                   _currentQuestion.choices.length,
-                  (index) => Padding(
-                    padding:  EdgeInsets.only(bottom: 1.h),
+                      (index) => Padding(
+                    padding: EdgeInsets.only(bottom: 1.h),
                     child: SizedBox(
                       width: 60.w,
                       height: 58,
                       child: OutlinedButton(
-                        onPressed: () => _answerQuestion(index),
-                        style: OutlinedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: _choiceColor(index),
-                          foregroundColor: _choiceTextColor(index),
-                          side: BorderSide(
-                            color: _hasAnswered && _selectedIndex == index
-                                ? _choiceColor(index)
-                                : const Color(0xFFE1E1E1),
-                            width: 2,
+                        onPressed: _stage == _TriviaStage.question
+                            ? () => _answerQuestion(index)
+                            : null,
+                        // WidgetStatePropertyAll applies these feedback colors
+                        // even when onPressed becomes null (disabled state).
+                        style: ButtonStyle(
+                          elevation: const WidgetStatePropertyAll(0),
+                          backgroundColor: WidgetStatePropertyAll(
+                            _choiceColor(index),
                           ),
-                          shape: const StadiumBorder(),
+                          foregroundColor: WidgetStatePropertyAll(
+                            _choiceTextColor(index),
+                          ),
+                          side: WidgetStatePropertyAll(
+                            BorderSide(
+                              color: _choiceBorderColor(index),
+                              width: 2,
+                            ),
+                          ),
+                          shape: const WidgetStatePropertyAll(StadiumBorder()),
                         ),
                         child: Text(
                           _currentQuestion.choices[index],
@@ -440,6 +470,15 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                     ),
                   ),
                 ),
+                if (_stage == _TriviaStage.answerReveal) ...[
+                  const Text(
+                    '',
+                    style: TextStyle(
+                      color: Color(0xFF666666),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -456,7 +495,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
       child: Column(
         children: [
           Padding(
-            padding:  EdgeInsets.symmetric(horizontal: 5.w,),
+            padding: EdgeInsets.symmetric(horizontal: 5.w),
             child: Row(
               children: [
                 Column(
@@ -464,7 +503,10 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                     Row(
                       children: [
                         Container(
-                          padding:  EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF4B43),
                             borderRadius: BorderRadius.circular(5),
@@ -504,7 +546,6 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                     ),
                   ],
                 ),
-
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -535,19 +576,14 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
               ],
             ),
           ),
-
           Container(
             width: double.infinity,
             color: _isEliminated
-                ? const Color(0xFF646464)
+                ? const Color(0xFFEF3A3A)
                 : const Color(0xFF43A849),
             padding: const EdgeInsets.symmetric(vertical: 18),
             child: Text(
-              _isEliminated
-                  ? (_playingForFun
-                        ? 'Playing just for fun'
-                        : 'You are eliminated')
-                  : "You're still active",
+              _isEliminated ? 'You are eliminated' : "You're still active",
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
@@ -560,7 +596,342 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
       ),
     );
   }
+  Widget _buildHostAvatar() {
+    return SizedBox(
+      width: 40.w,
+      height: 40.w,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Outer dotted / sound-wave-inspired circle.
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.65),
+                width: 2,
+              ),
+            ),
+          ),
 
+          // Host image.
+          Container(
+            width: 35.w,
+            height: 35.w,
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(shape: BoxShape.circle),
+            child: Image.asset(
+              'assets/png/avatar.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // A subtle live/mic indicator. Remove this if you have an animated
+          // audio-wave package or a custom waveform asset to place here.
+          Positioned(
+            bottom: 18,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF4035),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.mic_rounded,
+                color: Colors.white,
+                size: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildHostTalkingView() {
+    const hostName = 'David';
+    const viewerCount = '233 Views';
+
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Column(
+          children: [
+             SizedBox(height: 5.h),
+
+            // Replace with Image.asset if ChemShaa is an image logo.
+             Text(
+              'ChemShaa',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'serif',
+              ),
+            ),
+
+            SizedBox(height: 10.h),
+
+            _buildHostAvatar(),
+
+            SizedBox(height: 2.h),
+
+            Text(
+              'Host: $hostName',
+              style:  TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+
+            const Spacer(flex: 3),
+
+            _buildStatusBar(),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildNextQuestionLoadingView() {
+    final nextQuestionNumber = _questionIndex + 2;
+
+    return SafeArea(
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -0.2),
+            radius: 1.15,
+            colors: [
+              Color(0xFF242424),
+              Color(0xFF0B0B0B),
+              Colors.black,
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Subtle ambient glow behind the main loader.
+            Center(
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFDC38).withValues(alpha: 0.06),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFDC38).withValues(alpha: 0.10),
+                      blurRadius: 80,
+                      spreadRadius: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF4438),
+                          borderRadius: BorderRadius.circular(7),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF4438).withValues(
+                                alpha: 0.28,
+                              ),
+                              blurRadius: 14,
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.fiber_manual_record_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'LIVE',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.14),
+                          ),
+                        ),
+                        child: Text(
+                          'Question $nextQuestionNumber of ${_questions.length}',
+                          style: const TextStyle(
+                            color: Color(0xFFE3E3E3),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF151515),
+                      border: Border.all(
+                        color: const Color(0xFFFFDC38).withValues(alpha: 0.45),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          blurRadius: 30,
+                          offset: const Offset(0, 14),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const SizedBox(
+                          width: 114,
+                          height: 114,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 4,
+                            color: Color(0xFFFFDC38),
+                            backgroundColor: Color(0xFF343434),
+                          ),
+                        ),
+                        Container(
+                          width: 68,
+                          height: 68,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFDC38),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.quiz_rounded,
+                            color: Colors.black,
+                            size: 34,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  const Text(
+                    'Next question is loading',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'Get ready for question $nextQuestionNumber.\\nThe next round begins shortly.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFC7C7C7),
+                      fontSize: 16,
+                      height: 1.45,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 15,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF43A849),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.bolt_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Stay ready — answer quickly to remain active.',
+                            style: TextStyle(
+                              color: Color(0xFFE8E8E8),
+                              fontSize: 14,
+                              height: 1.25,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildFinishedView() {
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -584,7 +955,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
           const SizedBox(height: 12),
           Text(
             _isEliminated
-                ? 'Thanks for playing. You completed all 10 questions.'
+                ? 'Thanks for playing. You completed all ${_questions.length} questions.'
                 : 'You answered all questions correctly!',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 17, height: 1.4),
@@ -604,31 +975,25 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
   }
 }
 
-class _TimerIcon extends StatelessWidget {
-  const _TimerIcon({required this.secondsRemaining});
-
-  final int secondsRemaining;
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge();
 
   @override
   Widget build(BuildContext context) {
-    final color = secondsRemaining <= 5
-        ? const Color(0xFFE04B46)
-        : const Color(0xFF252525);
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Icon(Icons.timer_outlined, color: color, size: 38),
-        Text(
-          secondsRemaining.toString(),
-          style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF4B43),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Text(
+        'LIVE',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
         ),
-      ],
+      ),
     );
   }
 }
-
