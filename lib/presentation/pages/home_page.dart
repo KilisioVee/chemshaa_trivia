@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:chemshaa_app/presentation/pages/settings_page.dart';
 import 'package:chemshaa_app/presentation/pages/trivia_question_page.dart';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
@@ -90,7 +91,27 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
               flex: 1,
               child: IconButton(
                 tooltip: 'More options',
-                onPressed: () {},
+                onPressed: () =>Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SettingsPage(
+                      phoneNumber: '+254726048046',
+                      joinedOn: DateTime(2026, 8, 29, 5, 57),
+                      onContactUs: () {
+                        // Open email / support flow.
+                      },
+                      onFollowUpdates: () {
+                        // Launch your X profile URL.
+                      },
+                      onDeleteAccount: () {
+                        // Show a confirmation dialog before deleting.
+                      },
+                      onLogout: () {
+                        // Clear authentication and navigate to login.
+                      },
+                    ),
+                  ),
+                ),
                 icon: const Icon(
                   Icons.more_vert,
                   color: Color(0xFF101010),
@@ -122,7 +143,7 @@ class _ChemShaaLiveTriviaPageState extends State<ChemShaaLiveTriviaPage> {
                          Padding(
                            padding:  EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 0),
                            child: Text(
-                            "Today's live trivia show is scheduled\nfor\nat 2:00 PM",
+                            _remaining.inHours>=12.1?"Tomorrow's live trivia show is scheduled\nfor\nat 2:00 PM":"Today's live trivia show is scheduled\nfor\nat 2:00 PM",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFF101010),
