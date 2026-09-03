@@ -1,19 +1,24 @@
 # chemshaa_app
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+````
+    ChemShaa is a Flutter-based live trivia application that delivers a mobile game-show experience. Players join a hosted trivia session, answer timed multiple-choice questions, receive immediate answer feedback, and compete for a cash prize.
+    The app is designed around an automatic live-game flow: questions, answer reveals, host intermissions, and next-question loading screens progress without requiring users to tap a Continue button.
+````
+ ## Features
+````
+    Timed multiple-choice trivia questions
+    Randomized question order for each session
+    Circular countdown timer with seconds remaining
+    Immediate answer feedback
+    Correct selection: correct choice is highlighted in green
+    Wrong selection: selected choice is highlighted in red and the correct choice in green
+    No answer before timeout: the correct choice is highlighted in green
+    Automatic game progression after answer feedback
+    Full-screen host-speaking intermission
+    Full-screen next-question loading experience
+    Live-game metadata, including viewer count, question progress, and cash prize
+    Player-state feedback for active, eliminated, correct, incorrect, and unanswered states
+    End-of-game completion screen
+````
 
 ### Build Laucher Icons
 
