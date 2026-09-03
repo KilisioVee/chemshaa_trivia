@@ -261,7 +261,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
     final correctIndex = _currentQuestion.correctIndex;
 
     if (_selectedIndex == null) {
-      return index == correctIndex ? _wrongRed : Colors.white;
+      return index == correctIndex ? _correctGreen : Colors.white;
     }
 
     if (_selectedIndex != correctIndex) {
@@ -667,7 +667,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
               'ChemShaa',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 20.sp,
+                fontSize: 22.sp,
                 fontWeight: FontWeight.w800,
                 fontFamily: 'serif',
               ),
@@ -793,9 +793,9 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                         ),
                         child: Text(
                           'Question $nextQuestionNumber of ${_questions.length}',
-                          style: const TextStyle(
+                          style:  TextStyle(
                             color: Color(0xFFE3E3E3),
-                            fontSize: 13,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -854,12 +854,12 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
 
                   const SizedBox(height: 36),
 
-                  const Text(
+                   Text(
                     'Next question is loading',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 24.sp,
                       height: 1.15,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
@@ -869,7 +869,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                   const SizedBox(height: 12),
 
                   Text(
-                    'Get ready for question $nextQuestionNumber.\\nThe next round begins shortly.',
+                    'Get ready for question $nextQuestionNumber.\nThe next round begins shortly.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Color(0xFFC7C7C7),
@@ -909,13 +909,13 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        const Expanded(
+                         SizedBox(width: 3.w),
+                         Expanded(
                           child: Text(
                             'Stay ready — answer quickly to remain active.',
                             style: TextStyle(
                               color: Color(0xFFE8E8E8),
-                              fontSize: 14,
+                              fontSize: 15.sp,
                               height: 1.25,
                               fontWeight: FontWeight.w500,
                             ),
@@ -955,7 +955,7 @@ class _LiveTriviaDialogState extends State<_LiveTriviaDialog> {
           const SizedBox(height: 12),
           Text(
             _isEliminated
-                ? 'Thanks for playing. You completed all ${_questions.length} questions.'
+                ? 'Thanks for playing! You completed all ${_questions.length} questions. You didn’t win this round, but you can try again tomorrow.'
                 : 'You answered all questions correctly!',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 17, height: 1.4),
