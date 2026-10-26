@@ -1,6 +1,6 @@
 # chemshaa_app
 ````
-    ChemShaa is a Flutter-based live trivia application that delivers a mobile game-show experience. Players join a hosted trivia session, answer timed multiple-choice questions, receive immediate answer feedback, and compete for a cash prize.
+    ChemShaa is a Flutter-based live trivia clone application that delivers a mobile game-show experience. Players join a hosted trivia session, answer timed multiple-choice questions, receive immediate answer feedback, and compete for a cash prize.
     The app is designed around an automatic live-game flow: questions, answer reveals, host intermissions, and next-question loading screens progress without requiring users to tap a Continue button.
 ````
  ## Features
